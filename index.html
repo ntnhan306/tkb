@@ -1,12 +1,150 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thời Khoá Biểu</title>
-    <link rel="stylesheet" href="./styles.css"
+  <meta charset="UTF-8">
+  <title>Thời Khóa Biểu</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta/dist/vanta.waves.min.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Times New Roman', serif; }
+    .lop-kinh { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border-radius: 1rem; }
+  </style>
 </head>
-<body>
-    <h1>Thời Khoá Biểu</h1>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden">
+  <div id="tai" class="absolute inset-0 flex items-center justify-center bg-black text-white text-2xl">Đang tải...</div>
+  <div id="ung_dung" class="hidden relative z-10 p-6 lop-kinh shadow-2xl w-11/12 max-w-6xl">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-3xl font-bold">Thời Khóa Biểu</h1>
+      <div class="flex gap-3">
+        <button onclick="tai_lai()"><i data-feather="refresh-cw"></i></button>
+        <button onclick="mo_cai_dat()"><i data-feather="settings"></i></button>
+        <button onclick="mo_them_mon()"><i data-feather="plus"></i></button>
+      </div>
+    </div>
+    <p id="ngay_hom_nay" class="mb-4"></p>
+    <div class="overflow-x-auto">
+      <table class="table-auto border-collapse border border-gray-300 w-full text-center">
+        <thead>
+          <tr id="tieu_de_bang"></tr>
+        </thead>
+        <tbody id="noi_dung_bang"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Cài Đặt -->
+  <div id="hop_cai_dat" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+      <h2 class="text-xl font-bold mb-4">Cài đặt</h2>
+      <input id="bat_dau_tiet" type="time" class="border p-2 mb-2 w-full" placeholder="Bắt đầu">
+      <input id="ket_thuc_tiet" type="time" class="border p-2 mb-4 w-full" placeholder="Kết thúc">
+      <button onclick="them_tiet()" class="bg-blue-500 text-white px-4 py-2 rounded">Thêm tiết</button>
+      <button onclick="dong_cai_dat()" class="ml-2 bg-gray-400 px-4 py-2 rounded">Đóng</button>
+    </div>
+  </div>
+
+  <!-- Modal Thêm Môn -->
+  <div id="hop_them_mon" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+      <h2 class="text-xl font-bold mb-4">Thêm Môn</h2>
+      <input id="ten_mon" type="text" class="border p-2 mb-2 w-full" placeholder="Tên môn">
+      <select id="chon_ngay" class="border p-2 mb-2 w-full"></select>
+      <select id="chon_tiet" class="border p-2 mb-4 w-full"></select>
+      <button onclick="luu_mon()" class="bg-green-500 text-white px-4 py-2 rounded">Lưu</button>
+      <button onclick="dong_them_mon()" class="ml-2 bg-gray-400 px-4 py-2 rounded">Đóng</button>
+    </div>
+  </div>
+
+  <script>
+    let du_lieu = {
+      cac_tiet: [
+        { bat_dau: "07:00", ket_thuc: "07:45" },
+        { bat_dau: "07:50", ket_thuc: "08:35" }
+      ],
+      cac_mon: {}
+    };
+
+    function ve_bang() {
+      let tieu_de = document.getElementById("tieu_de_bang");
+      let noi_dung = document.getElementById("noi_dung_bang");
+      tieu_de.innerHTML = "<th class='border p-2'>Tiết</th>";
+      const ngay_trong_tuan = ["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ nhật"];
+      ngay_trong_tuan.forEach(n => { tieu_de.innerHTML += `<th class='border p-2'>${n}</th>` });
+      noi_dung.innerHTML = "";
+      du_lieu.cac_tiet.forEach((t, i) => {
+        let dong = `<tr><td class='border p-2'>${i+1}<br>${t.bat_dau}-${t.ket_thuc}</td>`;
+        ngay_trong_tuan.forEach((n, j) => {
+          let khoa = `${j}-${i}`;
+          dong += `<td class='border p-2'>${du_lieu.cac_mon[khoa]||""}</td>`;
+        });
+        dong += "</tr>";
+        noi_dung.innerHTML += dong;
+      });
+    }
+
+    function cap_nhat_ngay() {
+      let d = new Date();
+      document.getElementById("ngay_hom_nay").innerText =
+        `Hôm nay: ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    }
+
+    function mo_cai_dat(){ document.getElementById("hop_cai_dat").classList.remove("hidden"); }
+    function dong_cai_dat(){ document.getElementById("hop_cai_dat").classList.add("hidden"); }
+    function them_tiet(){
+      let b = document.getElementById("bat_dau_tiet").value;
+      let k = document.getElementById("ket_thuc_tiet").value;
+      if(b && k){ du_lieu.cac_tiet.push({bat_dau:b, ket_thuc:k}); ve_bang(); dong_cai_dat(); }
+    }
+
+    function mo_them_mon(){
+      let selectN = document.getElementById("chon_ngay");
+      let selectT = document.getElementById("chon_tiet");
+      selectN.innerHTML = "";
+      ["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ nhật"].forEach((n,i)=>{
+        selectN.innerHTML += `<option value='${i}'>${n}</option>`;
+      });
+      selectT.innerHTML = "";
+      du_lieu.cac_tiet.forEach((t,i)=>{
+        selectT.innerHTML += `<option value='${i}'>Tiết ${i+1}</option>`;
+      });
+      document.getElementById("hop_them_mon").classList.remove("hidden");
+    }
+    function dong_them_mon(){ document.getElementById("hop_them_mon").classList.add("hidden"); }
+    function luu_mon(){
+      let mon = document.getElementById("ten_mon").value;
+      let n = document.getElementById("chon_ngay").value;
+      let t = document.getElementById("chon_tiet").value;
+      du_lieu.cac_mon[`${n}-${t}`] = mon;
+      ve_bang();
+      dong_them_mon();
+    }
+
+    function tai_lai(){ location.reload(); }
+
+    function khoi_dong_vanta(){
+      if(window.VANTA){
+        VANTA.WAVES({
+          el: document.body,
+          mouseControls: true,
+          touchControls: true,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          scale: 1.0,
+          scaleMobile: 1.0
+        });
+      }
+    }
+
+    window.onload = () => {
+      khoi_dong_vanta();
+      cap_nhat_ngay();
+      ve_bang();
+      feather.replace();
+      document.getElementById("tai").classList.add("hidden");
+      document.getElementById("ung_dung").classList.remove("hidden");
+    }
+  </script>
 </body>
 </html>
