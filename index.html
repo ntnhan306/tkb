@@ -14,10 +14,12 @@
 </head>
 <body class="min-h-screen flex items-center justify-center relative overflow-hidden">
   <div id="tai" class="absolute inset-0 flex items-center justify-center bg-black text-white text-2xl">Đang tải...</div>
+
   <div id="ung_dung" class="hidden relative z-10 p-6 lop-kinh shadow-2xl w-11/12 max-w-6xl">
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-3xl font-bold">Thời Khóa Biểu</h1>
       <div class="flex gap-3">
+        <select id="chon_hoc_sinh" class="border p-2 rounded"></select>
         <button onclick="tai_lai()"><i data-feather="refresh-cw"></i></button>
         <button onclick="mo_cai_dat()"><i data-feather="settings"></i></button>
         <button onclick="mo_them_mon()"><i data-feather="plus"></i></button>
@@ -35,7 +37,7 @@
   </div>
 
   <!-- Modal Cài Đặt -->
-  <div id="hop_cai_dat" class="z-[1000] relative hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+  <div id="hop_cai_dat" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]">
     <div class="bg-white p-6 rounded-lg shadow-lg w-96">
       <h2 class="text-xl font-bold mb-4">Cài đặt</h2>
       <input id="bat_dau_tiet" type="time" class="border p-2 mb-2 w-full" placeholder="Bắt đầu">
@@ -46,9 +48,9 @@
   </div>
 
   <!-- Modal Thêm Môn -->
-  <div id="hop_them_mon" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+  <div id="hop_them_mon" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]">
     <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-      <h2 class="z-[1000] relative text-xl font-bold mb-4">Thêm Môn</h2>
+      <h2 class="text-xl font-bold mb-4">Thêm Môn</h2>
       <input id="ten_mon" type="text" class="border p-2 mb-2 w-full" placeholder="Tên môn">
       <select id="chon_ngay" class="border p-2 mb-2 w-full"></select>
       <select id="chon_tiet" class="border p-2 mb-4 w-full"></select>
@@ -58,26 +60,49 @@
   </div>
 
   <script>
-    let du_lieu = {
-      cac_tiet: [
-        { bat_dau: "07:00", ket_thuc: "07:45" },
-        { bat_dau: "07:50", ket_thuc: "08:35" }
-      ],
-      cac_mon: {}
-    };
+    let du_lieu = {};
+    let nguoi_hoc_hien_tai = null;
+
+    async function tai_du_lieu() {
+      try {
+        const res = await fetch('data.json');
+        du_lieu = await res.json();
+        cap_nhat_chon_hoc_sinh();
+        nguoi_hoc_hien_tai = Object.keys(du_lieu)[0];
+        ve_bang();
+      } catch (err) {
+        console.error('Lỗi tải dữ liệu:', err);
+      }
+    }
+
+    function cap_nhat_chon_hoc_sinh() {
+      const select = document.getElementById("chon_hoc_sinh");
+      select.innerHTML = '';
+      Object.keys(du_lieu).forEach(hs => {
+        const opt = document.createElement('option');
+        opt.value = hs;
+        opt.textContent = hs;
+        select.appendChild(opt);
+      });
+      select.onchange = () => {
+        nguoi_hoc_hien_tai = select.value;
+        ve_bang();
+      };
+    }
 
     function ve_bang() {
+      if (!nguoi_hoc_hien_tai) return;
       let tieu_de = document.getElementById("tieu_de_bang");
       let noi_dung = document.getElementById("noi_dung_bang");
       tieu_de.innerHTML = "<th class='border p-2'>Tiết</th>";
       const ngay_trong_tuan = ["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ nhật"];
       ngay_trong_tuan.forEach(n => { tieu_de.innerHTML += `<th class='border p-2'>${n}</th>` });
       noi_dung.innerHTML = "";
-      du_lieu.cac_tiet.forEach((t, i) => {
+      du_lieu[nguoi_hoc_hien_tai].cac_tiet.forEach((t, i) => {
         let dong = `<tr><td class='border p-2'>${i+1}<br>${t.bat_dau}-${t.ket_thuc}</td>`;
         ngay_trong_tuan.forEach((n, j) => {
           let khoa = `${j}-${i}`;
-          dong += `<td class='border p-2'>${du_lieu.cac_mon[khoa]||""}</td>`;
+          dong += `<td class='border p-2'>${du_lieu[nguoi_hoc_hien_tai].cac_mon[khoa]||""}</td>`;
         });
         dong += "</tr>";
         noi_dung.innerHTML += dong;
@@ -90,12 +115,12 @@
         `Hôm nay: ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
     }
 
-    function mo_cai_dat(){ document.getElementById("hop_cai_dat").classList.remove("hidden"); }
-    function dong_cai_dat(){ document.getElementById("hop_cai_dat").classList.add("hidden"); }
+    function mo_cai_dat(){ document.getElementById("ung_dung").classList.add("hidden"); document.getElementById("hop_cai_dat").classList.remove("hidden"); }
+    function dong_cai_dat(){ document.getElementById("hop_cai_dat").classList.add("hidden"); document.getElementById("ung_dung").classList.remove("hidden"); }
     function them_tiet(){
       let b = document.getElementById("bat_dau_tiet").value;
       let k = document.getElementById("ket_thuc_tiet").value;
-      if(b && k){ du_lieu.cac_tiet.push({bat_dau:b, ket_thuc:k}); ve_bang(); dong_cai_dat(); }
+      if(b && k){ du_lieu[nguoi_hoc_hien_tai].cac_tiet.push({bat_dau:b, ket_thuc:k}); ve_bang(); dong_cai_dat(); }
     }
 
     function mo_them_mon(){
@@ -106,17 +131,18 @@
         selectN.innerHTML += `<option value='${i}'>${n}</option>`;
       });
       selectT.innerHTML = "";
-      du_lieu.cac_tiet.forEach((t,i)=>{
+      du_lieu[nguoi_hoc_hien_tai].cac_tiet.forEach((t,i)=>{
         selectT.innerHTML += `<option value='${i}'>Tiết ${i+1}</option>`;
       });
+      document.getElementById("ung_dung").classList.add("hidden");
       document.getElementById("hop_them_mon").classList.remove("hidden");
     }
-    function dong_them_mon(){ document.getElementById("hop_them_mon").classList.add("hidden"); }
+    function dong_them_mon(){ document.getElementById("hop_them_mon").classList.add("hidden"); document.getElementById("ung_dung").classList.remove("hidden"); }
     function luu_mon(){
       let mon = document.getElementById("ten_mon").value;
       let n = document.getElementById("chon_ngay").value;
       let t = document.getElementById("chon_tiet").value;
-      du_lieu.cac_mon[`${n}-${t}`] = mon;
+      du_lieu[nguoi_hoc_hien_tai].cac_mon[`${n}-${t}`] = mon;
       ve_bang();
       dong_them_mon();
     }
@@ -137,10 +163,10 @@
       }
     }
 
-    window.onload = () => {
+    window.onload = async () => {
+      await tai_du_lieu();
       khoi_dong_vanta();
       cap_nhat_ngay();
-      ve_bang();
       feather.replace();
       document.getElementById("tai").classList.add("hidden");
       document.getElementById("ung_dung").classList.remove("hidden");
