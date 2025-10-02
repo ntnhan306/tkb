@@ -10,22 +10,27 @@
   <style>
     body { font-family: 'Times New Roman', serif; }
     .lop-kinh { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border-radius: 1rem; }
+    #nut_cong { transition: opacity 0.3s ease; }
   </style>
 </head>
 <body class="min-h-screen flex items-center justify-center relative overflow-hidden">
   <div id="tai" class="absolute inset-0 flex items-center justify-center bg-black text-white text-2xl">Đang tải...</div>
 
+  <!-- Ứng dụng chính -->
   <div id="ung_dung" class="hidden relative z-10 p-6 lop-kinh shadow-2xl w-11/12 max-w-6xl">
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-3xl font-bold">Thời Khóa Biểu</h1>
       <div class="flex gap-3">
-        <select id="chon_hoc_sinh" class="border p-2 rounded"></select>
         <button onclick="tai_lai()"><i data-feather="refresh-cw"></i></button>
-        <button onclick="mo_cai_dat()"><i data-feather="settings"></i></button>
-        <button onclick="mo_them_mon()"><i data-feather="plus"></i></button>
+        <button ondblclick="mo_cai_dat()"><i data-feather="settings"></i></button>
+        <button id="nut_cong" class="hidden" onclick="xu_ly_nut_cong()"><i data-feather="plus"></i></button>
       </div>
     </div>
     <p id="ngay_hom_nay" class="mb-4"></p>
+
+    <label for="chon_nguoi" class="block mb-2">Chọn người học:</label>
+    <select id="chon_nguoi" class="border p-2 mb-4"></select>
+
     <div class="overflow-x-auto">
       <table class="table-auto border-collapse border border-gray-300 w-full text-center">
         <thead>
@@ -38,113 +43,108 @@
 
   <!-- Modal Cài Đặt -->
   <div id="hop_cai_dat" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]">
-    <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-96 relative">
+      <button onclick="dong_cai_dat()" class="absolute top-2 right-2"><i data-feather="x"></i></button>
       <h2 class="text-xl font-bold mb-4">Cài đặt</h2>
+      <label for="chon_nguoi_cd" class="block mb-2">Chọn người học:</label>
+      <select id="chon_nguoi_cd" class="border p-2 mb-4 w-full"></select>
       <input id="bat_dau_tiet" type="time" class="border p-2 mb-2 w-full" placeholder="Bắt đầu">
       <input id="ket_thuc_tiet" type="time" class="border p-2 mb-4 w-full" placeholder="Kết thúc">
       <button onclick="them_tiet()" class="bg-blue-500 text-white px-4 py-2 rounded">Thêm tiết</button>
-      <button onclick="dong_cai_dat()" class="ml-2 bg-gray-400 px-4 py-2 rounded">Đóng</button>
     </div>
   </div>
 
-  <!-- Modal Thêm Môn -->
-  <div id="hop_them_mon" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]">
+  <!-- Modal nhập mật khẩu khi nhấn + -->
+  <div id="hop_mat_khau" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]">
     <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-      <h2 class="text-xl font-bold mb-4">Thêm Môn</h2>
-      <input id="ten_mon" type="text" class="border p-2 mb-2 w-full" placeholder="Tên môn">
-      <select id="chon_ngay" class="border p-2 mb-2 w-full"></select>
-      <select id="chon_tiet" class="border p-2 mb-4 w-full"></select>
-      <button onclick="luu_mon()" class="bg-green-500 text-white px-4 py-2 rounded">Lưu</button>
-      <button onclick="dong_them_mon()" class="ml-2 bg-gray-400 px-4 py-2 rounded">Đóng</button>
+      <h2 class="text-xl font-bold mb-4">Nhập mật khẩu</h2>
+      <input id="mat_khau" type="password" class="border p-2 mb-4 w-full" placeholder="Mật khẩu">
+      <button onclick="kiem_tra_mat_khau()" class="bg-green-500 text-white px-4 py-2 rounded">Xác nhận</button>
+      <button onclick="dong_mat_khau()" class="ml-2 bg-gray-400 px-4 py-2 rounded">Đóng</button>
     </div>
   </div>
 
   <script>
     let du_lieu = {};
-    let nguoi_hoc_hien_tai = null;
+    let nguoi_hien_tai = "";
+    const mat_khau_dung = "1236";
 
-    async function tai_du_lieu() {
-      try {
-        const res = await fetch('data.json');
+    async function tai_du_lieu(){
+      try{
+        const res = await fetch("data.json");
         du_lieu = await res.json();
-        cap_nhat_chon_hoc_sinh();
-        nguoi_hoc_hien_tai = Object.keys(du_lieu)[0];
+        cap_nhat_ds_nguoi();
+        nguoi_hien_tai = Object.keys(du_lieu)[0];
         ve_bang();
-      } catch (err) {
-        console.error('Lỗi tải dữ liệu:', err);
-      }
+      }catch(e){ console.error("Lỗi tải dữ liệu", e); }
     }
 
-    function cap_nhat_chon_hoc_sinh() {
-      const select = document.getElementById("chon_hoc_sinh");
-      select.innerHTML = '';
-      Object.keys(du_lieu).forEach(hs => {
-        const opt = document.createElement('option');
-        opt.value = hs;
-        opt.textContent = hs;
-        select.appendChild(opt);
+    function cap_nhat_ds_nguoi(){
+      const select1 = document.getElementById("chon_nguoi");
+      const select2 = document.getElementById("chon_nguoi_cd");
+      select1.innerHTML = select2.innerHTML = "";
+      Object.keys(du_lieu).forEach(n=>{
+        select1.innerHTML += `<option value='${n}'>${n}</option>`;
+        select2.innerHTML += `<option value='${n}'>${n}</option>`;
       });
-      select.onchange = () => {
-        nguoi_hoc_hien_tai = select.value;
-        ve_bang();
-      };
+      select1.onchange = e=>{ nguoi_hien_tai = e.target.value; ve_bang(); };
+      select2.onchange = e=>{ nguoi_hien_tai = e.target.value; ve_bang(); };
     }
 
-    function ve_bang() {
-      if (!nguoi_hoc_hien_tai) return;
+    function ve_bang(){
+      if(!du_lieu[nguoi_hien_tai]) return;
       let tieu_de = document.getElementById("tieu_de_bang");
       let noi_dung = document.getElementById("noi_dung_bang");
       tieu_de.innerHTML = "<th class='border p-2'>Tiết</th>";
       const ngay_trong_tuan = ["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ nhật"];
       ngay_trong_tuan.forEach(n => { tieu_de.innerHTML += `<th class='border p-2'>${n}</th>` });
       noi_dung.innerHTML = "";
-      du_lieu[nguoi_hoc_hien_tai].cac_tiet.forEach((t, i) => {
+      du_lieu[nguoi_hien_tai].cac_tiet.forEach((t, i) => {
         let dong = `<tr><td class='border p-2'>${i+1}<br>${t.bat_dau}-${t.ket_thuc}</td>`;
         ngay_trong_tuan.forEach((n, j) => {
           let khoa = `${j}-${i}`;
-          dong += `<td class='border p-2'>${du_lieu[nguoi_hoc_hien_tai].cac_mon[khoa]||""}</td>`;
+          dong += `<td class='border p-2'>${du_lieu[nguoi_hien_tai].cac_mon[khoa]||""}</td>`;
         });
         dong += "</tr>";
         noi_dung.innerHTML += dong;
       });
     }
 
-    function cap_nhat_ngay() {
+    function cap_nhat_ngay(){
       let d = new Date();
       document.getElementById("ngay_hom_nay").innerText =
         `Hôm nay: ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
     }
 
-    function mo_cai_dat(){ document.getElementById("ung_dung").classList.add("hidden"); document.getElementById("hop_cai_dat").classList.remove("hidden"); }
-    function dong_cai_dat(){ document.getElementById("hop_cai_dat").classList.add("hidden"); document.getElementById("ung_dung").classList.remove("hidden"); }
+    function mo_cai_dat(){
+      document.getElementById("ung_dung").classList.add("hidden");
+      document.getElementById("hop_cai_dat").classList.remove("hidden");
+    }
+    function dong_cai_dat(){
+      document.getElementById("ung_dung").classList.remove("hidden");
+      document.getElementById("hop_cai_dat").classList.add("hidden");
+    }
+
     function them_tiet(){
       let b = document.getElementById("bat_dau_tiet").value;
       let k = document.getElementById("ket_thuc_tiet").value;
-      if(b && k){ du_lieu[nguoi_hoc_hien_tai].cac_tiet.push({bat_dau:b, ket_thuc:k}); ve_bang(); dong_cai_dat(); }
+      if(b && k){ du_lieu[nguoi_hien_tai].cac_tiet.push({bat_dau:b, ket_thuc:k}); ve_bang(); dong_cai_dat(); }
     }
 
-    function mo_them_mon(){
-      let selectN = document.getElementById("chon_ngay");
-      let selectT = document.getElementById("chon_tiet");
-      selectN.innerHTML = "";
-      ["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ nhật"].forEach((n,i)=>{
-        selectN.innerHTML += `<option value='${i}'>${n}</option>`;
-      });
-      selectT.innerHTML = "";
-      du_lieu[nguoi_hoc_hien_tai].cac_tiet.forEach((t,i)=>{
-        selectT.innerHTML += `<option value='${i}'>Tiết ${i+1}</option>`;
-      });
-      document.getElementById("ung_dung").classList.add("hidden");
-      document.getElementById("hop_them_mon").classList.remove("hidden");
+    function xu_ly_nut_cong(){
+      document.getElementById("nut_cong").classList.add("hidden");
+      document.getElementById("hop_mat_khau").classList.remove("hidden");
     }
-    function dong_them_mon(){ document.getElementById("hop_them_mon").classList.add("hidden"); document.getElementById("ung_dung").classList.remove("hidden"); }
-    function luu_mon(){
-      let mon = document.getElementById("ten_mon").value;
-      let n = document.getElementById("chon_ngay").value;
-      let t = document.getElementById("chon_tiet").value;
-      du_lieu[nguoi_hoc_hien_tai].cac_mon[`${n}-${t}`] = mon;
-      ve_bang();
-      dong_them_mon();
+
+    function kiem_tra_mat_khau(){
+      let nhap = document.getElementById("mat_khau").value;
+      if(nhap === mat_khau_dung){ window.location.href = "edit.html"; }
+      else { alert("Sai mật khẩu!"); }
+    }
+
+    function dong_mat_khau(){
+      document.getElementById("hop_mat_khau").classList.add("hidden");
+      document.getElementById("ung_dung").classList.remove("hidden");
     }
 
     function tai_lai(){ location.reload(); }
@@ -163,13 +163,17 @@
       }
     }
 
-    window.onload = async () => {
-      await tai_du_lieu();
+    window.onload = () => {
       khoi_dong_vanta();
       cap_nhat_ngay();
+      tai_du_lieu();
       feather.replace();
       document.getElementById("tai").classList.add("hidden");
       document.getElementById("ung_dung").classList.remove("hidden");
+      // Hiện nút + trong 5s rồi ẩn
+      const nut = document.getElementById("nut_cong");
+      nut.classList.remove("hidden");
+      setTimeout(()=>{ nut.classList.add("hidden"); }, 5000);
     }
   </script>
 </body>
